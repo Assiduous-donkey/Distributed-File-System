@@ -3,3 +3,7 @@
 2、Go文件传输：https://www.jianshu.com/p/c77a704c2913
 
 3、Golang的HTTP server：https://studygolang.com/articles/24738?fr=sidebar
+
+4、Go对Redis的使用：https://blog.csdn.net/wangshubo1989/article/details/75050024
+
+5、go对redis的使用，详细：https://www.cnblogs.com/ricklz/p/9562722.html
