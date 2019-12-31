@@ -63,10 +63,13 @@ func main() {
 }
 
 func RegisterRpcServer() {
-	rpc.Register(new(MasterMakeDir))
-	rpc.Register(new(MasterCreateFile))
-	rpc.Register(new(MasterCd))
+	rpc.Register(new(MasterOptions))
 	rpc.HandleHTTP()
+}
+
+//有关目录服务器所有操作的实体
+type MasterOptions struct {
+
 }
 
 // 创建目录的RPC
@@ -76,10 +79,7 @@ type DirInfo struct {
 type DirReply struct {
 	Status bool
 }
-type MasterMakeDir struct {
-
-}
-func (this *MasterMakeDir) MakeDirectory(dirinfo *DirInfo,reply *DirReply) error {
+func (this *MasterOptions) MakeDirectory(dirinfo *DirInfo,reply *DirReply) error {
 	masterLog.Println("调用MakeDirectory")
 	redisconn:=redisPool.Get()	//redis连接
 	defer redisconn.Close()
@@ -97,7 +97,7 @@ func (this *MasterMakeDir) MakeDirectory(dirinfo *DirInfo,reply *DirReply) error
 		return err
 	}
 	sendMessage:=DirInfo{Path:dirinfo.Path}
-	err=client.Call("FileMakeDir.MakeDirectory",&sendMessage,&reply)
+	err=client.Call("FileServer.MakeDirectory",&sendMessage,&reply)
 	if err!=nil {
 		return err
 	}
@@ -116,10 +116,7 @@ type FileInfo struct {
 type FileReply struct {
 	Status bool
 }
-type MasterCreateFile struct {
-
-}
-func (this *MasterCreateFile) CreateFile(fileinfo *FileInfo,reply *FileReply) error {
+func (this *MasterOptions) CreateFile(fileinfo *FileInfo,reply *FileReply) error {
 	masterLog.Println("调用CreateFile")
 	redisconn:=redisPool.Get()	//redis连接
 	defer redisconn.Close()
@@ -137,7 +134,7 @@ func (this *MasterCreateFile) CreateFile(fileinfo *FileInfo,reply *FileReply) er
 		return err
 	}
 	sendMessage:=FileInfo{Path:fileinfo.Path}
-	err=client.Call("FileCreateFile.CreateFile",&sendMessage,&reply)
+	err=client.Call("FileServer.CreateFile",&sendMessage,&reply)
 	if err!=nil {
 		return err
 	}
@@ -152,10 +149,7 @@ type CdInfo struct {
 type CdReply struct {
 	Status bool
 }
-type MasterCd struct {
-
-}
-func (this *MasterCd) ChangeDirectory(cdinfo *CdInfo,reply *CdReply) error {
+func (this *MasterOptions) ChangeDirectory(cdinfo *CdInfo,reply *CdReply) error {
 	masterLog.Println("调用ChangeDirectory")
 	redisconn:=redisPool.Get()	//redis连接
 	defer redisconn.Close()
@@ -167,4 +161,70 @@ func (this *MasterCd) ChangeDirectory(cdinfo *CdInfo,reply *CdReply) error {
 	}
 	reply.Status=true
 	return nil
+}
+
+// 删除目录的RPC
+type DelInfo struct {
+	Path string
+}
+type DelReply struct {
+	Status bool
+}
+func (this *MasterOptions) DeleteDir(delinfo *DirInfo,reply *DelReply) error {
+	masterLog.Println("调用DeleteDir")
+	redisconn:=redisPool.Get()
+	defer redisconn.Close()
+	node,err:=redis.String(redisconn.Do("GET",delinfo.Path))
+	if err!=nil {
+		reply.Status=false
+		return errors.New("目录不存在")
+	}
+	// 目录存在 访问目录所在的服务器执行指定的删除操作
+	// 先建立连接
+	client,err:=rpc.DialHTTP("tcp",node)
+	if err!=nil {
+		masterLog.Println(err)
+		reply.Status=false
+		return err
+	}
+	sendMessage:=DelInfo{Path:delinfo.Path}
+	err=client.Call("FileServer.DeleteDir",&sendMessage,&reply)
+	if err!=nil {
+		reply.Status=false
+		return err
+	}
+	_,err=redisconn.Do("DEL",delinfo.Path)
+	if err!=nil {
+		masterLog.Println(err)
+	}
+	return err
+}
+func (this *MasterOptions) DeleteFile(delinfo *DelInfo,reply *DelReply) error {
+	masterLog.Println("调用DeleteFile")
+	redisconn:=redisPool.Get()
+	defer redisconn.Close()
+	node,err:=redis.String(redisconn.Do("GET",delinfo.Path))
+	if err!=nil {
+		reply.Status=false
+		return errors.New("文件不存在")
+	}
+	// 目录存在 访问目录所在的服务器执行指定的删除操作
+	// 先建立连接
+	client,err:=rpc.DialHTTP("tcp",node)
+	if err!=nil {
+		masterLog.Println(err)
+		reply.Status=false
+		return err
+	}
+	sendMessage:=DelInfo{Path:delinfo.Path}
+	err=client.Call("FileServer.DeleteFile",&sendMessage,&reply)
+	if err!=nil {
+		reply.Status=false
+		return err
+	}
+	_,err=redisconn.Do("DEL",delinfo.Path)
+	if err!=nil {
+		masterLog.Println(err)
+	}
+	return err
 }

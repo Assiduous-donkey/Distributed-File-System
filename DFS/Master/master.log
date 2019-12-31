@@ -19,3 +19,29 @@
 2019/12/31 12:19:45 master.go:159: 调用ChangeDirectory
 2019/12/31 12:20:24 master.go:159: 调用ChangeDirectory
 2019/12/31 12:21:21 master.go:159: 调用ChangeDirectory
+2019/12/31 16:27:45 master.go:159: 调用ChangeDirectory
+2019/12/31 16:27:46 master.go:33: dial tcp 127.0.0.1:6379: connectex: No connection could be made because the target machine actively refused it.
+2019/12/31 16:28:33 master.go:159: 调用ChangeDirectory
+2019/12/31 16:35:45 master.go:159: 调用ChangeDirectory
+2019/12/31 16:36:27 master.go:159: 调用ChangeDirectory
+2019/12/31 16:36:36 master.go:83: 调用MakeDirectory
+2019/12/31 16:36:37 master.go:104: 成功创建目录: t2int2
+2019/12/31 16:37:29 master.go:159: 调用ChangeDirectory
+2019/12/31 16:37:34 master.go:83: 调用MakeDirectory
+2019/12/31 16:37:34 master.go:104: 成功创建目录: t2/int2
+2019/12/31 16:38:05 master.go:123: 调用CreateFile
+2019/12/31 16:38:16 master.go:123: 调用CreateFile
+2019/12/31 16:40:16 master.go:159: 调用ChangeDirectory
+2019/12/31 16:40:23 master.go:159: 调用ChangeDirectory
+2019/12/31 16:40:31 master.go:123: 调用CreateFile
+2019/12/31 16:40:44 master.go:123: 调用CreateFile
+2019/12/31 16:57:51 master.go:123: 调用CreateFile
+2019/12/31 17:06:19 master.go:174: 调用DeleteDir
+2019/12/31 17:06:30 master.go:83: 调用MakeDirectory
+2019/12/31 17:06:30 master.go:104: 成功创建目录: t1
+2019/12/31 17:06:33 master.go:153: 调用ChangeDirectory
+2019/12/31 17:06:40 master.go:153: 调用ChangeDirectory
+2019/12/31 17:07:08 master.go:174: 调用DeleteDir
+2019/12/31 17:16:04 master.go:203: 调用DeleteFile
+2019/12/31 17:17:21 master.go:203: 调用DeleteFile
+2019/12/31 17:19:21 master.go:203: 调用DeleteFile

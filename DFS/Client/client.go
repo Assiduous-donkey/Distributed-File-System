@@ -81,6 +81,12 @@ func main() {
 		} else if strings.Compare("cd",command[0])==0 {
 			err:=ChangeDirectory(command[1])
 			fmt.Println(err)
+		} else if strings.Compare("rmall",command[0])==0 {
+			err:=DeleteDir(command[1])
+			fmt.Println(err)
+		} else if strings.Compare("rm",command[0])==0 {
+			err:=DeleteFile(command[1])
+			fmt.Println(err)
 		}
     }
 }
@@ -95,9 +101,12 @@ type DirReply struct {
 }
 func MakeDirectory(dirpath string) error{
 	fmt.Println("mkdir")
-	dirinfo:=DirInfo{Path:curpath+dirpath}
+	if curpath!="" {
+		dirpath=curpath+"/"+dirpath
+	}
+	dirinfo:=DirInfo{Path:dirpath}
 	var reply DirReply
-	err:=masterClient.Call("MasterMakeDir.MakeDirectory",&dirinfo,&reply)
+	err:=masterClient.Call("MasterOptions.MakeDirectory",&dirinfo,&reply)
 	if err!=nil{
 		clientLog.Println(err)
 		return err
@@ -112,14 +121,14 @@ type FileInfo struct {
 type FileReply struct {
 	Status bool
 }
-type FileCreateFile struct {
-
-}
 func CreateFile(filepath string) error{
 	fmt.Println("create")
-	fileinfo:=FileInfo{Path:curpath+filepath}
+	if curpath!="" {
+		filepath=curpath+"/"+filepath
+	}
+	fileinfo:=FileInfo{Path:filepath}
 	var reply FileReply
-	err:=masterClient.Call("MasterCreateFile.CreateFile",&fileinfo,&reply)
+	err:=masterClient.Call("MasterOptions.CreateFile",&fileinfo,&reply)
 	if err!=nil{
 		clientLog.Println(err)
 		return err
@@ -156,7 +165,7 @@ func ChangeDirectory(dir string) error{
 	} else {
 		cdinfo:=CdInfo{Path:curpath+dir}
 		var reply CdReply
-		err:=masterClient.Call("MasterCd.ChangeDirectory",&cdinfo,&reply)
+		err:=masterClient.Call("MasterOptions.ChangeDirectory",&cdinfo,&reply)
 		if err!=nil {
 			clientLog.Println(err)
 			return err
@@ -164,4 +173,40 @@ func ChangeDirectory(dir string) error{
 		curpath+=dir
 		return nil
 	}
+}
+
+// 删除目录和文件的RPC
+type DelInfo struct {
+	Path string
+}
+type DelReply struct {
+	Status bool
+}
+func DeleteDir(dirpath string) error {
+	clientLog.Println("调用DeleteDir")
+	if curpath!="" {
+		dirpath=curpath+"/"+dirpath
+	}
+	delinfo:=DelInfo{Path:dirpath}
+	var reply DelReply
+	err:=masterClient.Call("MasterOptions.DeleteDir",&delinfo,&reply)
+	if err!=nil{
+		clientLog.Println(err)
+		return err
+	}
+	return nil
+}
+func DeleteFile(filepath string) error {
+	clientLog.Println("调用DeleteFile")
+	if curpath!="" {
+		filepath=curpath+"/"+filepath
+	}
+	delinfo:=DelInfo{Path:filepath}
+	var reply DelReply
+	err:=masterClient.Call("MasterOptions.DeleteFile",&delinfo,&reply)
+	if err!=nil{
+		clientLog.Println(err)
+		return err
+	}
+	return nil	
 }

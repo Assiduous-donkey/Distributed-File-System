@@ -62,10 +62,15 @@ func main() {
 
 // 注册RPC服务器
 func RegisterRpcServer() {
-	rpc.Register(new(FileMakeDir))
-	rpc.Register(new(FileCreateFile))
+	rpc.Register(new(FileServer))
 	rpc.HandleHTTP()
 }
+
+// 所有文件服务器操作的实体
+type FileServer struct {
+
+}
+
 // 创建目录的RPC
 type DirInfo struct {
 	Path string
@@ -73,10 +78,7 @@ type DirInfo struct {
 type DirReply struct {
 	Status bool
 }
-type FileMakeDir struct {
-
-}
-func (this *FileMakeDir) MakeDirectory(dirinfo *DirInfo,reply *DirReply) error {
+func (this *FileServer) MakeDirectory(dirinfo *DirInfo,reply *DirReply) error {
 	serverLog.Println("调用MakeDirectory")
 	err:=os.Mkdir(dirinfo.Path,os.ModePerm)
 	if err!=nil {
@@ -96,10 +98,7 @@ type FileInfo struct {
 type FileReply struct {
 	Status bool
 }
-type FileCreateFile struct {
-
-}
-func (this *FileCreateFile) CreateFile(fileinfo *FileInfo,reply *FileReply) error {
+func (this *FileServer) CreateFile(fileinfo *FileInfo,reply *FileReply) error {
 	serverLog.Println("调用CreateFile")
 	file,err:=os.Create(fileinfo.Path)
 	if err!=nil {
@@ -108,5 +107,29 @@ func (this *FileCreateFile) CreateFile(fileinfo *FileInfo,reply *FileReply) erro
 	}
 	defer file.Close()
 	reply.Status=true
+	return nil
+}
+
+// 删除目录的RPC 和 删除文件的RPC
+type DelInfo struct {
+	Path string
+}
+type DelReply struct {
+	Status bool
+}
+func (this *FileServer) DeleteDir(delinfo *DelInfo,reply *DelReply) error {
+	serverLog.Println("调用DeleteDir")
+	err:=os.RemoveAll(delinfo.Path)
+	if err!=nil {
+		return err
+	}
+	return nil
+}
+func (this *FileServer) DeleteFile(delinfo *DelInfo,reply *DelReply) error {
+	serverLog.Println("调用DeleteFile")
+	err:=os.Remove(delinfo.Path)
+	if err!=nil {
+		return err
+	}
 	return nil
 }
