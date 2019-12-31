@@ -46,8 +46,7 @@ func init() {
 	if err!=nil {
 		log.Fatalln("无法创建日志文件")
 	}
-	defer logfile.Close()
-	clientLog=log.New(logfile, "", log.LstdFlags|log.Lshortfile) // 日志文件格式:log包含时间及文件行数
+	clientLog=log.New(logfile,"", log.LstdFlags|log.Lshortfile) // 日志文件格式:log包含时间及文件行数
 	// 初始化连接池
 	redisPool=initPool(redisServer)
 	fmt.Println("正在初始化客户端")
@@ -87,6 +86,9 @@ func main() {
 		} else if strings.Compare("rm",command[0])==0 {
 			err:=DeleteFile(command[1])
 			fmt.Println(err)
+		} else if strings.Compare("read",command[0])==0 {
+			err:=ReadFile(command[1])
+			fmt.Println(err)
 		}
     }
 }
@@ -119,7 +121,7 @@ type FileInfo struct {
 	Path string
 }
 type FileReply struct {
-	Status bool
+	LastTime string
 }
 func CreateFile(filepath string) error{
 	fmt.Println("create")
@@ -133,6 +135,9 @@ func CreateFile(filepath string) error{
 		clientLog.Println(err)
 		return err
 	}
+	redisconn:=redisPool.Get()
+	defer redisconn.Close()
+	redisconn.Do("SET","client_"+filepath,time.Now().Format("1999-01-24 00:00:00"))
 	return nil
 }
 
@@ -208,5 +213,90 @@ func DeleteFile(filepath string) error {
 		clientLog.Println(err)
 		return err
 	}
+	redisconn:=redisPool.Get()
+	defer redisconn.Close()
+	redisconn.Do("DEL","client_"+filepath)
 	return nil	
+}
+
+// 读文件的RPC
+type ReadFileInfo struct {
+	Path string
+	Offset int64
+}
+type ReadFileReply struct {
+	ServerIP string
+	LastTime string
+	Content []byte
+	Count 	int	
+}
+func ReadFile(filepath string) error {
+	clientLog.Println("调用ReadFile")
+	if curpath!="" {
+		filepath=curpath+"/"+filepath
+	}
+	redisconn:=redisPool.Get()
+	defer redisconn.Close()
+	fileinfo:=ReadFileInfo{Path:filepath}
+	lasttime,err:=redis.String(redisconn.Do("GET","client_"+filepath))
+	have:=false		//本地有无缓存
+	if err==nil {
+		have=true
+	}
+	var reply ReadFileReply
+	// 调用master的RPC查询该文件的
+	err=masterClient.Call("MasterOptions.ReadFile",&fileinfo,&reply)
+	if err!=nil {
+		clientLog.Println(err)
+		return err
+	}
+
+	if have==false || reply.LastTime>lasttime { //服务器上的文件更新
+		// 调用文件服务器的RPC下载文件
+		err=ReadFileFromServer(filepath,&fileinfo,&reply)
+		if err!=nil {
+			return err
+		}
+		//更新本地缓存
+		redisconn.Do("SET","client_"+filepath,reply.LastTime)
+	} else {	//直接读本地的就好
+		fmt.Println("本地文件已是最新文件")
+		clientLog.Println("本地文件已是最新文件")
+	}
+	return nil
+}
+func ReadFileFromServer(filename string,fileinfo *ReadFileInfo,reply *ReadFileReply) error {
+	// 本地缓存的文件名以文件在文件系统中的路径命名
+	filename=strings.Replace(filename,"/","_",-1)
+	file,err:=os.Create(filename)
+	if err!=nil {
+		clientLog.Println(err)
+		return err
+	}
+	fileclient,err:=rpc.DialHTTP("tcp",reply.ServerIP)
+	if err!=nil {
+		clientLog.Println(err)
+		return err
+	}
+	fileinfo.Offset=0	//从偏移0开始读写
+	for {
+		err=fileclient.Call("FileServer.ReadFile",&fileinfo,&reply)
+		fmt.Println(reply.Count)
+		// fmt.Println(reply.Content)
+		if err!=nil {
+			clientLog.Println(err)
+			return err
+		}
+		_,err=file.WriteAt(reply.Content[:reply.Count],fileinfo.Offset)
+		if err!=nil{
+			clientLog.Println(err)
+			return err
+		}
+		fileinfo.Offset+=int64(reply.Count)
+		if reply.Count<4096{	//文件已经全部传输完成了
+			break
+		}
+	}
+	clientLog.Println("文件："+filename+"下载成功")
+	return nil
 }

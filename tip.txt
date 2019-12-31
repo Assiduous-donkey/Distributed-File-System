@@ -11,3 +11,5 @@
 6、go log的用法：https://studygolang.com/articles/14595
 
 7、go redis连接池：https://www.cnblogs.com/mafeng/p/6874295.html
+
+8、很详细的go文件操作：https://www.cnblogs.com/-beyond/p/9203272.html

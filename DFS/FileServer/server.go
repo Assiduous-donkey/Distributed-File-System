@@ -96,17 +96,16 @@ type FileInfo struct {
 	Path string
 }
 type FileReply struct {
-	Status bool
+	LastTime string
 }
 func (this *FileServer) CreateFile(fileinfo *FileInfo,reply *FileReply) error {
 	serverLog.Println("调用CreateFile")
 	file,err:=os.Create(fileinfo.Path)
 	if err!=nil {
-		reply.Status=false
 		return err
 	}
 	defer file.Close()
-	reply.Status=true
+	reply.LastTime=time.Now().Format("1999-01-24 00:00:00")
 	return nil
 }
 
@@ -131,5 +130,48 @@ func (this *FileServer) DeleteFile(delinfo *DelInfo,reply *DelReply) error {
 	if err!=nil {
 		return err
 	}
+	return nil
+}
+
+// 读文件的RPC
+type ReadFileInfo struct {
+	Path string
+	Offset int64
+}
+type ReadFileReply struct {
+	ServerIP string
+	LastTime string
+	Content []byte
+	Count 	int
+}
+func (this *FileServer) ReadFile(fileinfo *ReadFileInfo,reply *ReadFileReply) error {
+	serverLog.Println("调用ReadFile")
+	// 先不实现锁机制
+	filemsg,err:=os.Stat(fileinfo.Path)
+	if os.IsNotExist(err) {
+		serverLog.Println(err)
+		return err
+	}
+	// 获取文件大小 因为ReadAt函数在buffer容量大于剩余的要读取的字节数时会出错
+	filesize:=filemsg.Size()
+	content:=make([]byte,4096)
+	count:=0
+	file,_:=os.Open(fileinfo.Path)
+	if fileinfo.Offset+4096>=filesize{
+		_,err=file.Read(content)
+		if err!=nil{
+			return err
+		}
+		count=int(filesize-fileinfo.Offset)
+	} else {
+		count,err=file.ReadAt(content,fileinfo.Offset)
+		if err!=nil {
+			serverLog.Println(err)
+			return err
+		}
+	}
+	reply.Content=content
+	// serverLog.Println(reply.Content)
+	reply.Count=count
 	return nil
 }

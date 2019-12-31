@@ -1,0 +1,27 @@
+2019/12/31 23:29:46 client.go:228: 调用ReadFile
+2019/12/31 23:29:46 client.go:279: EOF
+2019/12/31 23:31:17 client.go:228: 调用ReadFile
+2019/12/31 23:31:17 client.go:281: EOF
+2019/12/31 23:32:12 client.go:228: 调用ReadFile
+2019/12/31 23:32:12 client.go:281: EOF
+2019/12/31 23:46:20 client.go:228: 调用ReadFile
+2019/12/31 23:46:21 client.go:297: 文件：test.txt下载成功
+2019/12/31 23:51:17 client.go:228: 调用ReadFile
+2019/12/31 23:51:17 client.go:258: 本地文件已是最新文件
+2019/12/31 23:54:22 client.go:205: 调用DeleteFile
+2019/12/31 23:54:39 client.go:234: 调用ReadFile
+2019/12/31 23:54:39 client.go:264: 本地文件已是最新文件
+2019/12/31 23:55:50 client.go:234: 调用ReadFile
+2019/12/31 23:55:50 client.go:292: os: invalid use of WriteAt on file opened with O_APPEND
+2019/12/31 23:57:01 client.go:234: 调用ReadFile
+2019/12/31 23:57:01 client.go:292: write test.txt: Access is denied.
+2019/12/31 23:58:10 client.go:234: 调用ReadFile
+2019/12/31 23:58:10 client.go:300: 文件：test.txt下载成功
+2020/01/01 00:12:03 client.go:234: 调用ReadFile
+2020/01/01 00:12:04 client.go:264: 本地文件已是最新文件
+2020/01/01 00:12:20 client.go:234: 调用ReadFile
+2020/01/01 00:12:20 client.go:300: 文件：test.txt下载成功
+2020/01/01 00:12:41 client.go:234: 调用ReadFile
+2020/01/01 00:12:41 client.go:264: 本地文件已是最新文件
+2020/01/01 00:13:22 client.go:234: 调用ReadFile
+2020/01/01 00:13:22 client.go:300: 文件：test.txt下载成功

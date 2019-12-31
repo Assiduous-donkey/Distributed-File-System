@@ -114,7 +114,7 @@ type FileInfo struct {
 	Path string
 }
 type FileReply struct {
-	Status bool
+	LastTime string
 }
 func (this *MasterOptions) CreateFile(fileinfo *FileInfo,reply *FileReply) error {
 	masterLog.Println("调用CreateFile")
@@ -123,14 +123,12 @@ func (this *MasterOptions) CreateFile(fileinfo *FileInfo,reply *FileReply) error
 	// 首先检查有没有该文件
 	_,err:=redis.String(redisconn.Do("GET",fileinfo.Path))
 	if err==nil {
-		reply.Status=false
 		return errors.New("文件已存在")
 	}
 	//没有该文件 则与文件服务器建立连接 调用文件服务器提供的RPC方法
 	client,err:=rpc.DialHTTP("tcp",node1)
 	if err!=nil {
 		masterLog.Println(err)
-		reply.Status=false
 		return err
 	}
 	sendMessage:=FileInfo{Path:fileinfo.Path}
@@ -139,6 +137,7 @@ func (this *MasterOptions) CreateFile(fileinfo *FileInfo,reply *FileReply) error
 		return err
 	}
 	redisconn.Do("SET",fileinfo.Path,node1)
+	redisconn.Do("SET","master_"+fileinfo.Path,reply.LastTime)
 	return nil
 }
 
@@ -227,4 +226,33 @@ func (this *MasterOptions) DeleteFile(delinfo *DelInfo,reply *DelReply) error {
 		masterLog.Println(err)
 	}
 	return err
+}
+
+
+// 读文件的RPC
+type ReadFileInfo struct {
+	Path string
+	Offset int64
+}
+type ReadFileReply struct {
+	ServerIP string
+	LastTime string
+	Content []byte
+	Count 	int
+}
+func (this *MasterOptions) ReadFile(fileinfo *ReadFileInfo,reply *ReadFileReply) error {
+	masterLog.Println("调用ReadFile")
+	redisconn:=redisPool.Get()
+	defer redisconn.Close()
+	serverip,err:=redis.String(redisconn.Do("GET",fileinfo.Path))
+	if err!=nil{ 	// 文件不存在
+		return err
+	}
+	lasttime,err:=redis.String(redisconn.Do("GET","master_"+fileinfo.Path))
+	if err!=nil{	
+		return err
+	}
+	reply.ServerIP=serverip
+	reply.LastTime=lasttime
+	return nil
 }
