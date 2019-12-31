@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"fmt"
 )
 
 type Args struct {
@@ -32,10 +33,11 @@ func main(){
 	arith:=new(Arith)		// 创建对象
 	rpc.Register(arith)		// 注册对象的RPC服务，公开对象的方法供客户端调用
 	rpc.HandleHTTP()		// 指定RPC的传输协议为HTTP
-	l,err:=net.Listen("tcp",":8080")	//监听8080端口 TCP协议
+	l,err:=net.Listen("tcp",":8090")	//监听8080端口 TCP协议
 	if err!=nil {
 		log.Fatal("listen error",err)
 	}
+	fmt.Println("开始监听")
 	go http.Serve(l,nil)			//创建协程 开启服务
 	os.Stdin.Read(make([]byte, 1))		//这个是读取控制台输入 只是为了让server一直运行直到控制台有输入再关闭
 }

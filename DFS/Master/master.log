@@ -1,0 +1,21 @@
+2019/12/31 10:11:21 master.go:82: 调用MakeDirectory
+2019/12/31 10:30:46 master.go:120: 调用CreateFile
+2019/12/31 11:19:25 master.go:83: 调用MakeDirectory
+2019/12/31 11:19:26 master.go:33: dial tcp 127.0.0.1:6379: connectex: No connection could be made because the target machine actively refused it.
+2019/12/31 11:23:02 master.go:158: 调用CreateFile
+2019/12/31 11:23:03 master.go:33: dial tcp 127.0.0.1:6379: connectex: No connection could be made because the target machine actively refused it.
+2019/12/31 11:25:13 master.go:84: 调用MakeDirectory
+2019/12/31 11:27:20 master.go:158: 调用CreateFile
+2019/12/31 12:09:56 master.go:84: 调用MakeDirectory
+2019/12/31 12:10:44 master.go:161: 调用ChangeDirectory
+2019/12/31 12:13:09 master.go:159: 调用ChangeDirectory
+2019/12/31 12:13:13 master.go:83: 调用MakeDirectory
+2019/12/31 12:14:00 master.go:83: 调用MakeDirectory
+2019/12/31 12:14:00 master.go:104: 成功创建目录
+2019/12/31 12:15:02 master.go:83: 调用MakeDirectory
+2019/12/31 12:15:02 master.go:104: 成功创建目录: t1
+2019/12/31 12:15:17 master.go:159: 调用ChangeDirectory
+2019/12/31 12:19:11 master.go:159: 调用ChangeDirectory
+2019/12/31 12:19:45 master.go:159: 调用ChangeDirectory
+2019/12/31 12:20:24 master.go:159: 调用ChangeDirectory
+2019/12/31 12:21:21 master.go:159: 调用ChangeDirectory

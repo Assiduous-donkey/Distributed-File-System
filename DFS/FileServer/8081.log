@@ -1,0 +1,15 @@
+2019/12/31 10:11:22 server.go:81: 调用MakeDirectory
+2019/12/31 10:11:22 server.go:91: 创建目录：test
+2019/12/31 10:30:47 server.go:106: 调用CreateFile
+2019/12/31 11:19:26 server.go:81: 调用MakeDirectory
+2019/12/31 11:19:26 server.go:91: 创建目录：test
+2019/12/31 11:25:13 server.go:81: 调用MakeDirectory
+2019/12/31 11:25:13 server.go:91: 创建目录：test
+2019/12/31 12:09:56 server.go:81: 调用MakeDirectory
+2019/12/31 12:09:56 server.go:91: 创建目录：t1
+2019/12/31 12:13:13 server.go:80: 调用MakeDirectory
+2019/12/31 12:13:13 server.go:83: mkdir t1: Cannot create a file when that file already exists.
+2019/12/31 12:14:00 server.go:80: 调用MakeDirectory
+2019/12/31 12:14:00 server.go:88: 创建目录：t2
+2019/12/31 12:15:02 server.go:80: 调用MakeDirectory
+2019/12/31 12:15:02 server.go:88: 创建目录：t1

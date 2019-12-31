@@ -7,21 +7,27 @@ import (
 	"fmt"
 )
 
+var client *rpc.Client
+
 type Args struct {
 	A,B int
 }
 
 func main() {
 	//先与RPC服务器建立连接
-	client,err:=rpc.DialHTTP("tcp","127.0.0.1:8080")
+	clienttemp,err:=rpc.DialHTTP("tcp","127.0.0.1:8090")
 	if err!=nil{
 		log.Fatal("dailHttp error",err)
-		return
 	}
+	client=clienttemp
+	// test()
+}
+
+func test(){
 	args:=Args{7,8}
 	var reply int
 	// Call 同步调用
-	err=client.Call("Arith.Multiply",&args,&reply)
+	err:=client.Call("Arith.Multiply",&args,&reply)
 	// fmt.Println(typeof(client))
 	if err!=nil{
 		log.Fatal("call arith.Multiply error",err)
@@ -35,6 +41,7 @@ func main() {
 		select {
 		case <-mulCall.Done:	//调用得到响应
 			fmt.Printf("Arith:%d*%d=%d\n",args.A,args.B,reply)
+			break
 		default:
 			fmt.Println("继续向下执行...")
 			time.Sleep(time.Second*2)

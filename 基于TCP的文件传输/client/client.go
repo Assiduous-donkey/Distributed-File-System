@@ -38,7 +38,7 @@ func main() {
 		fmt.Println("conn.Read error ",err)
 		return
 	}
-	if string(buf[:n])=="k" {
+	if string(buf[:n])=="ok" {
 		sendFile(conn,filepath)
 	}
 }

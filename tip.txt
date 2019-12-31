@@ -7,3 +7,7 @@
 4、Go对Redis的使用：https://blog.csdn.net/wangshubo1989/article/details/75050024
 
 5、go对redis的使用，详细：https://www.cnblogs.com/ricklz/p/9562722.html
+
+6、go log的用法：https://studygolang.com/articles/14595
+
+7、go redis连接池：https://www.cnblogs.com/mafeng/p/6874295.html
