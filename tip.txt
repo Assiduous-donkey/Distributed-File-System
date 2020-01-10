@@ -12,4 +12,6 @@
 
 7、go redis连接池：https://www.cnblogs.com/mafeng/p/6874295.html
 
-8、很详细的go文件操作：https://www.cnblogs.com/-beyond/p/9203272.html
+8、很详细的go文件操作：https://www.cnblogs.com/-beyond/p/9203272.html   ；https://blog.csdn.net/mrbuffoon/article/details/85990423
+
+9. 获取文件信息：https://www.jianshu.com/p/c73588889fc1
