@@ -46,3 +46,7 @@
 2019/12/31 23:58:10 server.go:148: 调用ReadFile
 2020/01/01 00:12:20 server.go:148: 调用ReadFile
 2020/01/01 00:13:22 server.go:148: 调用ReadFile
+2020/01/13 10:17:35 server.go:81: 调用CreateFile
+2020/01/13 10:18:04 server.go:92: 调用DeleteFile
+2020/01/13 11:01:50 server.go:151: 调用WriteFile
+2020/01/13 11:02:20 server.go:111: 调用ReadFile

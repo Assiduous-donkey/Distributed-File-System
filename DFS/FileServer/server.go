@@ -70,27 +70,6 @@ func RegisterRpcServer() {
 type FileServer struct {
 
 }
-
-// 创建目录的RPC
-type DirInfo struct {
-	Path string
-}
-type DirReply struct {
-	Status bool
-}
-func (this *FileServer) MakeDirectory(dirinfo *DirInfo,reply *DirReply) error {
-	serverLog.Println("调用MakeDirectory")
-	err:=os.Mkdir(dirinfo.Path,os.ModePerm)
-	if err!=nil {
-		serverLog.Println(err)
-		reply.Status=false
-		return errors.New("创建目录失败")
-	}
-	reply.Status=true
-	serverLog.Println("创建目录："+dirinfo.Path)
-	return nil
-}
-
 // 创建文件的RPC
 type FileInfo struct {
 	Path string
@@ -105,26 +84,11 @@ func (this *FileServer) CreateFile(fileinfo *FileInfo,reply *FileReply) error {
 		return err
 	}
 	defer file.Close()
-	reply.LastTime=time.Now().Format("1999-01-24 00:00:00")
+	reply.LastTime=time.Now().Format("2006/1/2 15:04:05")
 	return nil
 }
-
-// 删除目录的RPC 和 删除文件的RPC
-type DelInfo struct {
-	Path string
-}
-type DelReply struct {
-	Status bool
-}
-func (this *FileServer) DeleteDir(delinfo *DelInfo,reply *DelReply) error {
-	serverLog.Println("调用DeleteDir")
-	err:=os.RemoveAll(delinfo.Path)
-	if err!=nil {
-		return err
-	}
-	return nil
-}
-func (this *FileServer) DeleteFile(delinfo *DelInfo,reply *DelReply) error {
+// 删除文件的RPC
+func (this *FileServer) DeleteFile(delinfo *FileInfo,reply *FileReply) error {
 	serverLog.Println("调用DeleteFile")
 	err:=os.Remove(delinfo.Path)
 	if err!=nil {
@@ -132,7 +96,6 @@ func (this *FileServer) DeleteFile(delinfo *DelInfo,reply *DelReply) error {
 	}
 	return nil
 }
-
 // 读文件的RPC
 type ReadFileInfo struct {
 	Path string
@@ -146,7 +109,6 @@ type ReadFileReply struct {
 }
 func (this *FileServer) ReadFile(fileinfo *ReadFileInfo,reply *ReadFileReply) error {
 	serverLog.Println("调用ReadFile")
-	// 先不实现锁机制
 	filemsg,err:=os.Stat(fileinfo.Path)
 	if os.IsNotExist(err) {
 		serverLog.Println(err)
@@ -156,6 +118,15 @@ func (this *FileServer) ReadFile(fileinfo *ReadFileInfo,reply *ReadFileReply) er
 	filesize:=filemsg.Size()
 	content:=make([]byte,4096)
 	count:=0
+	// 检查是否有写锁
+	redisconn:=redisPool.Get()	//redis连接
+	defer redisconn.Close()
+	_,err=redis.String(redisconn.Do("GET","lock_"+fileinfo.Path))
+	if err==nil {	//有写锁
+		err=errors.New("文件正在被写")
+		serverLog.Println(err)
+		return err
+	}
 	file,_:=os.Open(fileinfo.Path)
 	if fileinfo.Offset+4096>=filesize{
 		_,err=file.Read(content)
@@ -171,7 +142,51 @@ func (this *FileServer) ReadFile(fileinfo *ReadFileInfo,reply *ReadFileReply) er
 		}
 	}
 	reply.Content=content
-	// serverLog.Println(reply.Content)
 	reply.Count=count
+	return nil
+}
+// 写文件的RPC
+type WriteFileInfo struct {
+	Path string
+	Mode int
+	Content []byte
+}
+type WriteFileReply struct {
+	ServerIP string
+	Count int
+}
+func (this *FileServer) WriteFile(fileinfo *WriteFileInfo,reply *WriteFileReply) error {
+	serverLog.Println("调用WriteFile")
+	// 检查是否有写锁
+	redisconn:=redisPool.Get()	//redis连接
+	defer redisconn.Close()
+	_,err:=redis.String(redisconn.Do("GET","lock_"+fileinfo.Path))
+	if err==nil {	//有写锁
+		err=errors.New("文件正在被写")
+		serverLog.Println(err)
+		return err
+	}
+	// 无写锁 则新建写锁
+	redisconn.Do("SET","lock_"+fileinfo.Path,"yes")
+	file,err:=os.OpenFile(fileinfo.Path,fileinfo.Mode,0777)
+	if err!=nil{
+		serverLog.Println(err)
+		return err
+	}
+	defer file.Close()
+	reply.Count,err=file.Write(fileinfo.Content)
+	if err!=nil {
+		serverLog.Println(err)
+		return err
+	}	
+	// 成功写文件后更新时间戳
+	// 与目录服务器共享同一个redis服务器 所以直接更新
+	newtime:=time.Now().Format("2006/1/2 15:04:05")
+	_,err=redisconn.Do("SET","master_"+fileinfo.Path,newtime)
+	if err!=nil {
+		serverLog.Println(err)
+		return err
+	}
+	redisconn.Do("DEL","lock_"+fileinfo.Path)
 	return nil
 }

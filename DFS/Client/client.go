@@ -27,8 +27,8 @@ var (
 
 func initPool(server string) *redis.Pool {
 	return &redis.Pool{
-		MaxIdle: 		3,			// 最大空闲连接
-		MaxActive: 		3,			// 最大激活连接数
+		MaxIdle: 		5,			// 最大空闲连接
+		MaxActive: 		5,			// 最大激活连接数
 		IdleTimeout:	6*time.Hour,	// 最大的空闲连接等待时间
 		Dial: func() (redis.Conn,error) {
 			conn,err:=redis.Dial("tcp",server)
@@ -61,7 +61,6 @@ func init() {
 func main() {
 	// 从控制台读取命令
 	reader := bufio.NewReader(os.Stdin)
-
     for {
         fmt.Print(curpath+"-> ")
 		input, _ := reader.ReadString('\n')
@@ -69,51 +68,39 @@ func main() {
 		// 返回 将s的前n个字符(n<0时为全部字符)中的old替换为new 得到的新字符串
 		input = strings.Replace(input,"\n", "", -1)
 		command:=strings.Fields(input)
-        if strings.Compare("mkdir", command[0]) == 0 {
-			err:=MakeDirectory(command[1])
-			fmt.Println(err)
-		} else if strings.Compare("create", command[0]) == 0{
-			err:=CreateFile(command[1])
+        if strings.Compare("create", command[0]) == 0{
+			err:=CreateServerFile(command[1])
 			fmt.Println(err)
 		} else if (strings.Compare("q", command[0]) == 0){
 			break
-		} else if strings.Compare("cd",command[0])==0 {
-			err:=ChangeDirectory(command[1])
-			fmt.Println(err)
-		} else if strings.Compare("rmall",command[0])==0 {
-			err:=DeleteDir(command[1])
-			fmt.Println(err)
 		} else if strings.Compare("rm",command[0])==0 {
-			err:=DeleteFile(command[1])
+			err:=DeleteServerFile(command[1])
 			fmt.Println(err)
 		} else if strings.Compare("read",command[0])==0 {
-			err:=ReadFile(command[1])
+			err:=ReadServerFile(command[1])
 			fmt.Println(err)
+		} else if strings.Compare("write",command[0])==0 {
+			str:="append"
+			content:=[]byte(str)
+			err:=WriteServerFile(command[1],os.O_APPEND,content)
+			fmt.Println(err)
+		} else if strings.Compare("test",command[0])==0 {
+			test()
 		}
     }
 }
 
-// 创建目录的RPC
-type DirInfo struct {
-	Path string
-}
-type DirReply struct {
-	Status bool
-	Msg error
-}
-func MakeDirectory(dirpath string) error{
-	fmt.Println("mkdir")
-	if curpath!="" {
-		dirpath=curpath+"/"+dirpath
-	}
-	dirinfo:=DirInfo{Path:dirpath}
-	var reply DirReply
-	err:=masterClient.Call("MasterOptions.MakeDirectory",&dirinfo,&reply)
-	if err!=nil{
-		clientLog.Println(err)
-		return err
-	}
-	return nil
+// 测试程序
+func test() {
+	file:="t2.txt"
+	// content1:=[]byte("111111111")
+	// content2:=[]byte("222222222")
+	content3:=[]byte("333333333")
+	// go WriteServerFile(file,os.O_APPEND,content1)
+	go ReadServerFile(file)
+	// go WriteServerFile(file,os.O_APPEND,content2)
+	go ReadServerFile(file)
+	go WriteServerFile(file,os.O_APPEND,content3)
 }
 
 // 创建文件的RPC
@@ -123,11 +110,8 @@ type FileInfo struct {
 type FileReply struct {
 	LastTime string
 }
-func CreateFile(filepath string) error{
+func CreateServerFile(filepath string) error{
 	fmt.Println("create")
-	if curpath!="" {
-		filepath=curpath+"/"+filepath
-	}
 	fileinfo:=FileInfo{Path:filepath}
 	var reply FileReply
 	err:=masterClient.Call("MasterOptions.CreateFile",&fileinfo,&reply)
@@ -137,77 +121,14 @@ func CreateFile(filepath string) error{
 	}
 	redisconn:=redisPool.Get()
 	defer redisconn.Close()
-	redisconn.Do("SET","client_"+filepath,time.Now().Format("1999-01-24 00:00:00"))
+	redisconn.Do("SET","client_"+filepath,time.Now().Format("2006/1/2 15:04:05"))
 	return nil
 }
-
-// 切换目录的RPC
-type CdInfo struct {
-	Path string
-}
-type CdReply struct {
-	Status bool
-}
-func ChangeDirectory(dir string) error{
-	fmt.Println("cd")
-	if strings.Compare("..",dir)==0 {
-		if curpath=="" {
-			return nil
-		}
-		pos:=-1
-		for i:=len(curpath)-1;i>=0;i-=1{
-			if(curpath[i]=='/') {
-				pos=i
-				break
-			}
-		}
-		newpath:=""
-		for i:=0;i<=pos;i+=1{
-			newpath+=string(curpath[i])
-		}
-		curpath=newpath
-		return nil
-	} else {
-		cdinfo:=CdInfo{Path:curpath+dir}
-		var reply CdReply
-		err:=masterClient.Call("MasterOptions.ChangeDirectory",&cdinfo,&reply)
-		if err!=nil {
-			clientLog.Println(err)
-			return err
-		}
-		curpath+=dir
-		return nil
-	}
-}
-
-// 删除目录和文件的RPC
-type DelInfo struct {
-	Path string
-}
-type DelReply struct {
-	Status bool
-}
-func DeleteDir(dirpath string) error {
-	clientLog.Println("调用DeleteDir")
-	if curpath!="" {
-		dirpath=curpath+"/"+dirpath
-	}
-	delinfo:=DelInfo{Path:dirpath}
-	var reply DelReply
-	err:=masterClient.Call("MasterOptions.DeleteDir",&delinfo,&reply)
-	if err!=nil{
-		clientLog.Println(err)
-		return err
-	}
-	return nil
-}
-func DeleteFile(filepath string) error {
+// 删除文件的RPC
+func DeleteServerFile(filepath string) error {
 	clientLog.Println("调用DeleteFile")
-	if curpath!="" {
-		filepath=curpath+"/"+filepath
-	}
-	delinfo:=DelInfo{Path:filepath}
-	var reply DelReply
+	delinfo:=FileInfo{Path:filepath}
+	var reply FileReply
 	err:=masterClient.Call("MasterOptions.DeleteFile",&delinfo,&reply)
 	if err!=nil{
 		clientLog.Println(err)
@@ -218,7 +139,6 @@ func DeleteFile(filepath string) error {
 	redisconn.Do("DEL","client_"+filepath)
 	return nil	
 }
-
 // 读文件的RPC
 type ReadFileInfo struct {
 	Path string
@@ -230,11 +150,8 @@ type ReadFileReply struct {
 	Content []byte
 	Count 	int	
 }
-func ReadFile(filepath string) error {
+func ReadServerFile(filepath string) error {
 	clientLog.Println("调用ReadFile")
-	if curpath!="" {
-		filepath=curpath+"/"+filepath
-	}
 	redisconn:=redisPool.Get()
 	defer redisconn.Close()
 	fileinfo:=ReadFileInfo{Path:filepath}
@@ -266,8 +183,6 @@ func ReadFile(filepath string) error {
 	return nil
 }
 func ReadFileFromServer(filename string,fileinfo *ReadFileInfo,reply *ReadFileReply) error {
-	// 本地缓存的文件名以文件在文件系统中的路径命名
-	filename=strings.Replace(filename,"/","_",-1)
 	file,err:=os.Create(filename)
 	if err!=nil {
 		clientLog.Println(err)
@@ -282,7 +197,6 @@ func ReadFileFromServer(filename string,fileinfo *ReadFileInfo,reply *ReadFileRe
 	for {
 		err=fileclient.Call("FileServer.ReadFile",&fileinfo,&reply)
 		fmt.Println(reply.Count)
-		// fmt.Println(reply.Content)
 		if err!=nil {
 			clientLog.Println(err)
 			return err
@@ -299,4 +213,64 @@ func ReadFileFromServer(filename string,fileinfo *ReadFileInfo,reply *ReadFileRe
 	}
 	clientLog.Println("文件："+filename+"下载成功")
 	return nil
+}
+// 写文件的RPC
+type WriteFileInfo struct {
+	Path string
+	Mode int
+	Content []byte
+}
+type WriteFileReply struct {
+	ServerIP string
+	Count int
+}
+func WriteServerFile(filepath string,mode int,content []byte) error {
+	clientLog.Println("调用WriteFile")
+	redisconn:=redisPool.Get()
+	defer redisconn.Close()
+	fileinfo:=WriteFileInfo{Path:filepath,Mode:mode}
+	var reply WriteFileReply
+	err:=masterClient.Call("MasterOptions.WriteFile",&fileinfo,&reply)
+	if err!=nil{
+		clientLog.Println(err)
+		return err
+	}
+	fileclient,err:=rpc.DialHTTP("tcp",reply.ServerIP)
+	if err!=nil {
+		clientLog.Println(err)
+		return err
+	}
+	fileinfo.Content=content
+	err=fileclient.Call("FileServer.WriteFile",&fileinfo,&reply)
+	if err!=nil {
+		clientLog.Println(err)
+		return err
+	}
+	return nil
+}
+
+// 自定义文件操作的接口
+// 包括创建文件、删除文件、读文件和写文件
+func CreateFile(filename string) error {
+	return CreateServerFile(filename)
+}
+func DeleteFile(filename string) error {
+	return DeleteServerFile(filename)
+}
+func ReadFile(filename string,content []byte) (int,error){
+	err:=ReadServerFile(filename)
+	if err!=nil {
+		clientLog.Println(err)
+		return 0,err
+	}
+	file,_:=os.Open(filename)
+	count,err:=file.Read(content)
+	if err!=nil{
+		clientLog.Println(err)
+		return 0,err
+	}
+	return count,nil
+}
+func WriteFile(filename string,mode int,content []byte) error {
+	return WriteServerFile(filename,mode,content)
 }
