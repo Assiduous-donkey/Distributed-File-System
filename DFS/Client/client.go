@@ -92,15 +92,11 @@ func main() {
 
 // 测试程序
 func test() {
-	file:="t2.txt"
-	// content1:=[]byte("111111111")
-	// content2:=[]byte("222222222")
-	content3:=[]byte("333333333")
-	// go WriteServerFile(file,os.O_APPEND,content1)
-	go ReadServerFile(file)
-	// go WriteServerFile(file,os.O_APPEND,content2)
-	go ReadServerFile(file)
-	go WriteServerFile(file,os.O_APPEND,content3)
+	file:="f1.txt"
+	content:=[]byte("test")
+	go WriteServerFile(file,os.O_APPEND,content)
+	go WriteServerFile(file,os.O_APPEND,content)
+	go WriteServerFile(file,os.O_APPEND,content)
 }
 
 // 创建文件的RPC
@@ -119,9 +115,6 @@ func CreateServerFile(filepath string) error{
 		clientLog.Println(err)
 		return err
 	}
-	redisconn:=redisPool.Get()
-	defer redisconn.Close()
-	redisconn.Do("SET","client_"+filepath,time.Now().Format("2006/1/2 15:04:05"))
 	return nil
 }
 // 删除文件的RPC
@@ -134,6 +127,7 @@ func DeleteServerFile(filepath string) error {
 		clientLog.Println(err)
 		return err
 	}
+	os.Remove(filepath)			// 删除本地缓存
 	redisconn:=redisPool.Get()
 	defer redisconn.Close()
 	redisconn.Do("DEL","client_"+filepath)
@@ -157,7 +151,7 @@ func ReadServerFile(filepath string) error {
 	fileinfo:=ReadFileInfo{Path:filepath}
 	lasttime,err:=redis.String(redisconn.Do("GET","client_"+filepath))
 	have:=false		//本地有无缓存
-	if err==nil {
+	if lasttime!="" {
 		have=true
 	}
 	var reply ReadFileReply
@@ -195,18 +189,18 @@ func ReadFileFromServer(filename string,fileinfo *ReadFileInfo,reply *ReadFileRe
 	}
 	fileinfo.Offset=0	//从偏移0开始读写
 	for {
-		err=fileclient.Call("FileServer.ReadFile",&fileinfo,&reply)
+		err=fileclient.Call("FileServer.ReadFile",&fileinfo,&reply)	//从文件服务器读取文件内容
 		fmt.Println(reply.Count)
 		if err!=nil {
 			clientLog.Println(err)
 			return err
 		}
-		_,err=file.WriteAt(reply.Content[:reply.Count],fileinfo.Offset)
+		_,err=file.WriteAt(reply.Content[:reply.Count],fileinfo.Offset)	// 按块写入本地缓存文件
 		if err!=nil{
 			clientLog.Println(err)
 			return err
 		}
-		fileinfo.Offset+=int64(reply.Count)
+		fileinfo.Offset+=int64(reply.Count)	// 计算下次要写入的位置
 		if reply.Count<4096{	//文件已经全部传输完成了
 			break
 		}
@@ -251,19 +245,19 @@ func WriteServerFile(filepath string,mode int,content []byte) error {
 
 // 自定义文件操作的接口
 // 包括创建文件、删除文件、读文件和写文件
-func CreateFile(filename string) error {
+func CreateFile(filename string) error {	// 创建
 	return CreateServerFile(filename)
 }
-func DeleteFile(filename string) error {
+func DeleteFile(filename string) error {	// 删除
 	return DeleteServerFile(filename)
 }
-func ReadFile(filename string,content []byte) (int,error){
-	err:=ReadServerFile(filename)
+func ReadFile(filename string,content []byte) (int,error){	// 读文件
+	err:=ReadServerFile(filename)	// 从文件服务器下载文件或者采用本地缓存
 	if err!=nil {
 		clientLog.Println(err)
 		return 0,err
 	}
-	file,_:=os.Open(filename)
+	file,_:=os.Open(filename)		// 再在本地读文件
 	count,err:=file.Read(content)
 	if err!=nil{
 		clientLog.Println(err)
@@ -271,6 +265,6 @@ func ReadFile(filename string,content []byte) (int,error){
 	}
 	return count,nil
 }
-func WriteFile(filename string,mode int,content []byte) error {
+func WriteFile(filename string,mode int,content []byte) error {	//写文件
 	return WriteServerFile(filename,mode,content)
 }

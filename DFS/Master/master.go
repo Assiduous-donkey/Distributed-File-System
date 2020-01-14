@@ -117,8 +117,7 @@ func (this *MasterOptions) DeleteFile(delinfo *FileInfo,reply *FileReply) error 
 		return errors.New("文件不存在")
 	}
 	// 目录存在 访问目录所在的服务器执行指定的删除操作
-	// 先建立连接
-	client,err:=rpc.DialHTTP("tcp",node)
+	client,err:=rpc.DialHTTP("tcp",node)	// 先建立连接
 	if err!=nil {
 		masterLog.Println(err)
 		return err
@@ -129,9 +128,7 @@ func (this *MasterOptions) DeleteFile(delinfo *FileInfo,reply *FileReply) error 
 		return err
 	}
 	_,err=redisconn.Do("DEL",delinfo.Path)
-	if err!=nil {
-		masterLog.Println(err)
-	}
+	_,err=redisconn.Do("DEL","master_"+delinfo.Path)
 	return err
 }
 // 读文件的RPC

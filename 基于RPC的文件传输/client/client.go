@@ -41,7 +41,7 @@ func GetFile(filename string,client *rpc.Client) error {
 		return err
 	}
 	content:=make([]byte,4096)
-	for {
+	for {	// 分块读取文件 每次传输4KB
 		n,err:=file.Read(content)
 		writer:=FileInfo{filename,content[:n]}
 		var reply string
@@ -58,5 +58,4 @@ func GetFile(filename string,client *rpc.Client) error {
 		}
 		fmt.Println(reply)
 	}
-	
 }

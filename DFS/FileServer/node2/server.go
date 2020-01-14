@@ -163,45 +163,33 @@ func (this *FileServer) ReadFile(fileinfo *ReadFileInfo,reply *ReadFileReply) er
 	redisconn.Do("EXEC")
 	// 正式读文件
 	// 获取文件大小 因为ReadAt函数在buffer容量大于剩余的要读取的字节数时会出错
-	if needBackup==false {	// 主文件服务器有文件
-		filesize:=filemsg.Size()
-		content:=make([]byte,4096)
-		count:=0
-		file,_:=os.Open(fileinfo.Path)
-		defer file.Close()
-		if fileinfo.Offset+4096>=filesize{
-			_,err=file.Read(content)
-			if err!=nil{
-				return err
-			}
-			count=int(filesize-fileinfo.Offset)
-		} else {
-			count,err=file.ReadAt(content,fileinfo.Offset)
-			if err!=nil {
-				serverLog.Println(err)
-				return err
-			}
-		}
-		reply.Content=content
-		reply.Count=count
-	} else {  //主文件服务器无文件 去备份服务器读
-		backupServer,err:=rpc.DialHTTP("tcp",backupPort)
-		if err!=nil {
-			serverLog.Println(err)
-			return err
-		}
-		err=backupServer.Call("BackupServer.ReadFile",fileinfo,reply)
-		if err!=nil {
-			serverLog.Println(err)
-			return err
-		}
-		//读完之后下载文件
+	if needBackup==true {	// 文件服务器无文件 需要先从备份服务器下载
 		err=DownloadFile(fileinfo.Path)
 		if err!=nil {
 			serverLog.Println(err)
 			return err
-		}	
+		}
 	}
+	filesize:=filemsg.Size()
+	content:=make([]byte,4096)
+	count:=0
+	file,_:=os.Open(fileinfo.Path)
+	defer file.Close()
+	if fileinfo.Offset+4096>=filesize{
+		_,err=file.Read(content)
+		if err!=nil{
+			return err
+		}
+		count=int(filesize-fileinfo.Offset)
+	} else {
+		count,err=file.ReadAt(content,fileinfo.Offset)
+		if err!=nil {
+			serverLog.Println(err)
+			return err
+		}
+	}
+	reply.Content=content
+	reply.Count=count
 	// 读好文件 要解锁 仍然需要事务操作
 	redisconn.Send("MULTI")
 	value,err=redis.String(redisconn.Do("GET","read_"+fileinfo.Path))
